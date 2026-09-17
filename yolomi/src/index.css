@@ -1,0 +1,99 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --bg-app: #121319;
+  --bg-panel: #191a22;
+  --bg-panel-raised: #21232d;
+  --bg-canvas: #0c0d12;
+  --border-subtle: #2a2c38;
+  --border-strong: #383a48;
+
+  /* Text */
+  --text-primary: #edeef2;
+  --text-secondary: #9497a8;
+  --text-tertiary: #676a7c;
+
+  /* Accent — calm technical blue, not the default terracotta/neon */
+  --accent: #5b8def;
+  --accent-soft: rgba(91, 141, 239, 0.14);
+  --accent-strong: #7ba3f5;
+
+  /* Status */
+  --status-done: #3dd68c;
+  --status-done-soft: rgba(61, 214, 140, 0.14);
+  --status-progress: #f5b84c;
+  --status-progress-soft: rgba(245, 184, 76, 0.14);
+  --status-danger: #f0605b;
+  --status-danger-soft: rgba(240, 96, 91, 0.14);
+
+  /* Type */
+  --font-ui: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+button:focus-visible,
+input:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+input, select {
+  font-family: inherit;
+  color: var(--text-primary);
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4a4d5e;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -1,0 +1,138 @@
+.classpanel {
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 46%;
+}
+
+.classpanel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.classpanel-title {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.classpanel-active-hint {
+  font-size: 11px;
+  color: var(--accent-strong);
+  font-family: var(--font-mono);
+}
+
+.classpanel-warning,
+.classpanel-error {
+  font-size: 11.5px;
+  color: var(--status-progress);
+  background: var(--status-progress-soft);
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.classpanel-error {
+  color: var(--status-danger);
+  background: var(--status-danger-soft);
+}
+
+.classpanel-list {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.classpanel-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.classpanel-row:hover {
+  background: var(--bg-panel-raised);
+}
+
+.classpanel-row.is-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.classpanel-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.classpanel-id {
+  width: 28px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 3px 2px;
+  background: var(--bg-canvas);
+}
+
+.classpanel-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  padding: 4px 6px;
+  background: var(--bg-canvas);
+}
+
+.classpanel-remove {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  display: flex;
+}
+
+.classpanel-remove:hover {
+  color: var(--status-danger);
+  background: var(--status-danger-soft);
+}
+
+.classpanel-add {
+  display: flex;
+  gap: 6px;
+}
+
+.classpanel-add-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  padding: 7px 9px;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.classpanel-add-input.is-flash {
+  border-color: var(--status-progress);
+  box-shadow: 0 0 0 3px var(--status-progress-soft);
+}
+
+.classpanel-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: #0c0d12;
+}
+
+.classpanel-add-btn:hover {
+  background: var(--accent-strong);
+}
