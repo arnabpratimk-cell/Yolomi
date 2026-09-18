@@ -8,6 +8,7 @@
 
 Draw boxes, assign classes, export YOLO / COCO / Pascal VOC — no install, no backend, no account. Everything stays on your machine.
 
+[![npm](https://img.shields.io/npm/v/yolomi.svg)](https://www.npmjs.com/package/yolomi)
 [![React](https://img.shields.io/badge/UI-React%2019-149eca)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/build-Vite-646cff)](https://vitejs.dev/)
 [![Client-only](https://img.shields.io/badge/backend-none-3dd68c)](#how-it-works)
@@ -17,15 +18,62 @@ Draw boxes, assign classes, export YOLO / COCO / Pascal VOC — no install, no b
 
 ---
 
+## Install
+
+```cmd
+npm install -g yolomi
+```
+
+Requires [Node.js](https://nodejs.org) (includes npm). Check with `node -v` if you're not sure it's installed.
+
 ## Run
 
 ```cmd
+yolomi
+```
+
+Builds the app on first run (a few seconds) and opens it automatically in your default browser. Later runs launch instantly.
+
+If it doesn't open automatically, copy the local URL printed in the terminal (e.g. `http://localhost:4173`) into your browser.
+
+Use **Chrome or Edge** (needed for real folder read/write via the File System Access API — other browsers fall back to read-only picking and zip downloads). Click **Open folder**, point it at a directory of images, and start annotating.
+
+## For new users (friends, teammates, anyone else)
+
+No coding experience needed — just these steps:
+
+1. **Install Node.js** (skip if already installed): download from [nodejs.org](https://nodejs.org), choose the **LTS** version, and run the installer. Confirm it worked by opening a terminal and running:
+   ```cmd
+   node -v
+   ```
+
+2. **Install Yolomi**:
+   ```cmd
+   npm install -g yolomi
+   ```
+
+3. **Run it**:
+   ```cmd
+   yolomi
+   ```
+   The first run builds the app (a few seconds) and opens it automatically in your default browser. Every run after that is instant.
+
+4. **If the browser doesn't open automatically**, copy the URL printed in the terminal (something like `http://localhost:4173`) and paste it into your browser manually.
+
+5. **Use Chrome or Edge** for the best experience — these support saving labels directly to a folder on disk. Other browsers still work, but fall back to a zip download instead of direct folder access.
+
+That's it — no Python, no accounts, no configuration. Click **Open folder**, point it at your images, and start annotating.
+
+## Run from source
+
+```cmd
+git clone https://github.com/arnabpratimk-cell/yolomi.git
 cd yolomi
 npm install
 npm run dev
 ```
 
-Open the printed `http://localhost:5173` in **Chrome or Edge** (needed for real folder read/write via the File System Access API — other browsers fall back to read-only picking and zip downloads). Click **Open folder**, point it at a directory of images, and start annotating.
+Open the printed `http://localhost:5173` in Chrome or Edge.
 
 ## How it works
 
@@ -65,6 +113,8 @@ Yolomi is a single-page app with **no backend and no database** — it runs enti
 
 ```
 yolomi/
+├── bin/
+│   └── cli.js                  # npm global-install launcher
 ├── index.html
 ├── package.json
 ├── vite.config.js
