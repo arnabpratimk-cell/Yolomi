@@ -1,4 +1,4 @@
-const IMAGE_EXT = /\.(jpe?g|png|webp|bmp)$/i;
+const IMAGE_EXT = /\.(jpe?g|png|webp|bmp|avif|gif|svg|ico|tiff?)$/i;;
 
 export const supportsFSAccess = typeof window !== 'undefined' && 'showDirectoryPicker' in window;
 
