@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-const IMAGE_EXT = /\.(jpe?g|png|webp|bmp|avif|gif|svg|ico|tiff?)$/i;;
-=======
 const IMAGE_EXT = /\.(jpe?g|png|webp|bmp|avif|gif|svg|ico|tiff?)$/i;
->>>>>>> ec9eca5 (Feature: color picker per class, fix image formats, simplify CLI)
 
 export const supportsFSAccess = typeof window !== 'undefined' && 'showDirectoryPicker' in window;
 
