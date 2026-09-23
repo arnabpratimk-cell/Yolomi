@@ -19,6 +19,9 @@ export default function ClassPanel() {
   const [flash, setFlash] = useState(false);
   const inputRef = useRef(null);
 
+  // One hidden <input type="color"> per class, keyed by class id
+  const colorRefs = useRef({});
+
   useEffect(() => {
     if (focusClassInputRequest === 0) return;
     inputRef.current?.focus();
@@ -47,6 +50,16 @@ export default function ClassPanel() {
     else updateClass(cls.id, { pendingId: value });
   }
 
+  function handleColorClick(e, cls) {
+    e.stopPropagation();
+    // Trigger the hidden native color picker for this class
+    colorRefs.current[cls.id]?.click();
+  }
+
+  function handleColorChange(cls, newColor) {
+    updateClass(cls.id, { color: newColor });
+  }
+
   const sorted = [...classes].sort((a, b) => a.id - b.id);
   const idsInUse = classes.map((c) => c.id).sort((a, b) => a - b);
   const hasGap = idsInUse.some((id, i) => i > 0 && id !== idsInUse[i - 1] + 1);
@@ -56,12 +69,16 @@ export default function ClassPanel() {
       <div className="classpanel-header">
         <span className="classpanel-title">Classes</span>
         {activeClassId !== null && (
-          <span className="classpanel-active-hint">drawing as {classes.find((c) => c.id === activeClassId)?.name}</span>
+          <span className="classpanel-active-hint">
+            drawing as {classes.find((c) => c.id === activeClassId)?.name}
+          </span>
         )}
       </div>
 
       {hasGap && (
-        <div className="classpanel-warning">Class IDs have a gap — YOLO export expects a contiguous 0..N sequence.</div>
+        <div className="classpanel-warning">
+          Class IDs have a gap — YOLO export expects a contiguous 0..N sequence.
+        </div>
       )}
 
       <div className="classpanel-list">
@@ -71,7 +88,22 @@ export default function ClassPanel() {
             className={`classpanel-row ${activeClassId === cls.id ? 'is-active' : ''}`}
             onClick={() => setActiveClassId(cls.id)}
           >
-            <span className="classpanel-swatch" style={{ background: cls.color }} />
+            {/* Clickable color swatch — opens native color picker */}
+            <span
+              className="classpanel-swatch classpanel-swatch-btn"
+              style={{ background: cls.color }}
+              onClick={(e) => handleColorClick(e, cls)}
+              title="Click to change colour"
+            />
+            {/* Hidden native color input */}
+            <input
+              type="color"
+              value={cls.color}
+              ref={(el) => { colorRefs.current[cls.id] = el; }}
+              onChange={(e) => handleColorChange(cls, e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              style={{ position: 'absolute', opacity: 0, width: 0, height: 0, pointerEvents: 'none' }}
+            />
             <input
               className="classpanel-id"
               value={cls.pendingId !== undefined ? cls.pendingId : cls.id}

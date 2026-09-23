@@ -136,3 +136,15 @@
 .classpanel-add-btn:hover {
   background: var(--accent-strong);
 }
+
+/* ── Color picker swatch button ── */
+.classpanel-swatch-btn {
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.classpanel-swatch-btn:hover {
+  opacity: 0.8;
+  outline: 2px solid #fff4;
+  border-radius: 3px;
+}
