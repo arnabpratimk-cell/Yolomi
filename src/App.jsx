@@ -6,7 +6,16 @@ import ClassPanel from './components/ClassPanel';
 import BoxList from './components/BoxList';
 import EmptyState from './components/EmptyState';
 import { useProjectStore } from './store/useProjectStore';
-import { openFolder, filesFromFileList, writeExportBundle, supportsFSAccess, pickSaveFolder, ensureReadWrite } from './lib/fileSystem';
+import {
+  openFolder,
+  filesFromFileList,
+  writeExportBundle,
+  supportsFSAccess,
+  pickSaveFolder,
+  ensureReadWrite,
+  readLabelsForImages,
+  parseYoloLabels,
+} from './lib/fileSystem';
 import { exportYolo } from './lib/exporters/yolo';
 import { exportCoco } from './lib/exporters/coco';
 import { exportPascalVoc } from './lib/exporters/pascalVoc';
@@ -25,19 +34,29 @@ export default function App() {
     setTimeout(() => setMessage(null), 3200);
   }
 
-  function buildImageRecords(files) {
-    return files.map((file) => ({
-      id: `img_${imgUid++}`,
-      name: file.name,
-      file,
-      url: URL.createObjectURL(file),
-      width: 0,
-      height: 0,
-      boxes: [],
-      status: 'not-started',
-      manualDone: false,
-      opened: false,
-    }));
+  // Build image records, attaching any pre-existing YOLO label boxes found on disk.
+  // Boxes are stored with _normalized coords and converted to pixels once the
+  // image dimensions are known (handled in Canvas.jsx via setImageDimensions).
+  function buildImageRecords(files, labelMap = new Map(), existingClasses = []) {
+    return files.map((file) => {
+      const baseName = file.name.replace(/\.[^.]+$/, '');
+      const txtContent = labelMap.get(baseName);
+      const boxes = txtContent ? parseYoloLabels(txtContent, existingClasses) : [];
+      const hasBoxes = boxes.length > 0;
+      return {
+        id: `img_${imgUid++}`,
+        name: file.name,
+        file,
+        url: URL.createObjectURL(file),
+        width: 0,
+        height: 0,
+        boxes,
+        // Mark as done if label file existed and had boxes
+        status: hasBoxes ? 'done' : 'not-started',
+        manualDone: hasBoxes,
+        opened: hasBoxes,
+      };
+    });
   }
 
   async function handleOpenFolder() {
@@ -45,8 +64,19 @@ export default function App() {
       try {
         const result = await openFolder();
         if (!result) return;
-        loadProject({ name: result.name, dirHandle: result.dirHandle, images: buildImageRecords(result.files) });
-        setExportDirHandle(null); // new project — clear any previously chosen labels folder
+
+        // Read any existing .txt label files from the same folder
+        const labelMap = await readLabelsForImages(result.dirHandle, result.files);
+        const { classes: currentClasses } = useProjectStore.getState();
+        const imageRecords = buildImageRecords(result.files, labelMap, currentClasses);
+
+        const loadedCount = labelMap.size;
+        loadProject({ name: result.name, dirHandle: result.dirHandle, images: imageRecords });
+        setExportDirHandle(null);
+
+        if (loadedCount > 0) {
+          flashMessage(`Loaded ${result.files.length} images — ${loadedCount} existing label files imported`, 'success');
+        }
       } catch (err) {
         if (err?.name !== 'AbortError') console.error(err);
       }
@@ -65,7 +95,7 @@ export default function App() {
 
   async function handleChooseLabelsFolder() {
     if (!supportsFSAccess) {
-      flashMessage('This browser can\u2019t pick a folder \u2014 labels will download instead', 'warning');
+      flashMessage("This browser can't pick a folder — labels will download instead", 'warning');
       return;
     }
     try {
@@ -81,8 +111,6 @@ export default function App() {
 
   async function ensureLabelsFolder() {
     if (exportDirHandle && (await ensureReadWrite(exportDirHandle))) return exportDirHandle;
-    // No folder chosen yet (or permission lapsed) — ask directly rather
-    // than silently failing.
     await handleChooseLabelsFolder();
     const { exportDirHandle: fresh } = useProjectStore.getState();
     return fresh && (await ensureReadWrite(fresh)) ? fresh : null;

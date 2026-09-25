@@ -39,16 +39,12 @@ export default function CanvasArea() {
   } = useProjectStore();
 
   const img = currentIndex >= 0 ? images[currentIndex] : null;
-  // Two stacked canvases: the base layer paints the image once per
-  // image/zoom change (expensive), the overlay layer paints only the
-  // boxes and is what redraws on every mousemove (cheap). Splitting these
-  // is what keeps dragging/resizing feeling light instead of re-blitting
-  // the full image on every pointer event.
   const baseCanvasRef = useRef(null);
   const overlayCanvasRef = useRef(null);
   const imgElRef = useRef(null);
+  const scrollRef = useRef(null);
   const [zoom, setZoom] = useState(1);
-  const [drag, setDrag] = useState(null); // { type: 'new'|'move'|'resize', ... }
+  const [drag, setDrag] = useState(null);
   const [hint, setHint] = useState('');
   const hintTimerRef = useRef(null);
 
@@ -60,6 +56,18 @@ export default function CanvasArea() {
 
   const classById = new Map(classes.map((c) => [c.id, c]));
 
+  // Calculate zoom to fit image inside the scroll container with padding
+  function calcFitZoom(naturalW, naturalH) {
+    const scroll = scrollRef.current;
+    if (!scroll) return 1;
+    const padding = 32;
+    const availW = scroll.clientWidth - padding * 2;
+    const availH = scroll.clientHeight - padding * 2;
+    const scaleW = availW / naturalW;
+    const scaleH = availH / naturalH;
+    return Math.min(scaleW, scaleH);
+  }
+
   // Load the natural image element whenever the current image changes.
   useEffect(() => {
     if (!img) return;
@@ -69,9 +77,14 @@ export default function CanvasArea() {
       if (!img.width) setImageDimensions(currentIndex, el.naturalWidth, el.naturalHeight);
       drawBase();
       drawOverlay();
+      // Use requestAnimationFrame so the scroll container has rendered
+      // with real dimensions before we calculate the fit zoom
+      requestAnimationFrame(() => {
+        const fitZoom = calcFitZoom(el.naturalWidth, el.naturalHeight);
+        setZoom(fitZoom > 0 ? fitZoom : 1);
+      });
     };
     el.src = img.url;
-    setZoom(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [img?.id]);
 
@@ -84,7 +97,6 @@ export default function CanvasArea() {
     };
   }, [img, zoom]);
 
-  // Base layer: just the image. Only depends on the image element + zoom.
   const drawBase = useCallback(() => {
     const canvas = baseCanvasRef.current;
     const el = imgElRef.current;
@@ -97,8 +109,6 @@ export default function CanvasArea() {
     ctx.drawImage(el, 0, 0, w, h);
   }, [img, canvasSize]);
 
-  // Overlay layer: boxes, drag preview, selection handles. Redrawn often —
-  // deliberately cheap (rects + text only, no image blit).
   const drawOverlay = useCallback(() => {
     const canvas = overlayCanvasRef.current;
     if (!canvas || !img) return;
@@ -149,19 +159,12 @@ export default function CanvasArea() {
     });
   }, [img, zoom, drag, selectedBoxId, classes, canvasSize]);
 
-  useEffect(() => {
-    drawBase();
-  }, [drawBase]);
+  useEffect(() => { drawBase(); }, [drawBase]);
+  useEffect(() => { drawOverlay(); }, [drawOverlay]);
 
-  useEffect(() => {
-    drawOverlay();
-  }, [drawOverlay]);
-
-  // Keep the cursor correct the instant "Start annotation" is toggled,
-  // even before the next mouse move.
   useEffect(() => {
     if (overlayCanvasRef.current) {
-      overlayCanvasRef.current.style.cursor = mode === 'draw' ? 'crosshair' : 'default';
+      overlayCanvasRef.current.style.cursor = mode === 'draw' ? '' : 'default';
     }
   }, [mode]);
 
@@ -196,16 +199,11 @@ export default function CanvasArea() {
     return handle === 'nw' || handle === 'se' ? 'nwse-resize' : 'nesw-resize';
   }
 
-  // Sets the overlay canvas cursor directly (not React state) so hovering
-  // around doesn't trigger re-renders — same reasoning as the two-layer
-  // canvas split. Only meaningful in "browse" mode: draw mode always
-  // stays crosshair since a click there starts a new box regardless of
-  // what's underneath.
   function updateHoverCursor(pos) {
     const el = overlayCanvasRef.current;
     if (!el || !img) return;
     if (mode === 'draw') {
-      el.style.cursor = 'crosshair';
+      el.style.cursor = '';
       return;
     }
     const selected = img.boxes.find((b) => b.id === selectedBoxId);
@@ -233,21 +231,11 @@ export default function CanvasArea() {
       }
     }
 
-    // Only select/move an existing box while browsing. In "draw" mode a
-    // click always starts a new box, even on top of one already there —
-    // this is what lets overlapping objects each get their own box
-    // instead of the earlier box "stealing" the click.
     if (mode !== 'draw') {
       const clicked = hitBox(pos);
       if (clicked) {
         selectBox(clicked.id);
-        setDrag({
-          type: 'move',
-          boxId: clicked.id,
-          origin: pos,
-          startBox: clicked,
-          previewBox: clicked,
-        });
+        setDrag({ type: 'move', boxId: clicked.id, origin: pos, startBox: clicked, previewBox: clicked });
         overlayCanvasRef.current.style.cursor = 'grabbing';
         return;
       }
@@ -289,37 +277,17 @@ export default function CanvasArea() {
     } else if (drag.type === 'move') {
       const dx = pos.x - drag.origin.x;
       const dy = pos.y - drag.origin.y;
-      setDrag({
-        ...drag,
-        previewBox: { ...drag.startBox, x: drag.startBox.x + dx, y: drag.startBox.y + dy },
-      });
+      setDrag({ ...drag, previewBox: { ...drag.startBox, x: drag.startBox.x + dx, y: drag.startBox.y + dy } });
     } else if (drag.type === 'resize') {
       const box = drag.previewBox;
       let { x, y, w, h } = box;
       const start = img.boxes.find((b) => b.id === drag.boxId);
       const x2 = start.x + start.w;
       const y2 = start.y + start.h;
-      if (drag.handle === 'se') {
-        w = pos.x - start.x;
-        h = pos.y - start.y;
-        x = start.x;
-        y = start.y;
-      } else if (drag.handle === 'nw') {
-        x = pos.x;
-        y = pos.y;
-        w = x2 - pos.x;
-        h = y2 - pos.y;
-      } else if (drag.handle === 'ne') {
-        y = pos.y;
-        w = pos.x - start.x;
-        h = y2 - pos.y;
-        x = start.x;
-      } else if (drag.handle === 'sw') {
-        x = pos.x;
-        w = x2 - pos.x;
-        h = pos.y - start.y;
-        y = start.y;
-      }
+      if (drag.handle === 'se') { w = pos.x - start.x; h = pos.y - start.y; x = start.x; y = start.y; }
+      else if (drag.handle === 'nw') { x = pos.x; y = pos.y; w = x2 - pos.x; h = y2 - pos.y; }
+      else if (drag.handle === 'ne') { y = pos.y; w = pos.x - start.x; h = y2 - pos.y; x = start.x; }
+      else if (drag.handle === 'sw') { x = pos.x; w = x2 - pos.x; h = pos.y - start.y; y = start.y; }
       setDrag({ ...drag, previewBox: { ...box, x, y, w: Math.abs(w), h: Math.abs(h) } });
     }
   }
@@ -335,7 +303,7 @@ export default function CanvasArea() {
     }
     setDrag(null);
     if (overlayCanvasRef.current) {
-      overlayCanvasRef.current.style.cursor = mode === 'draw' ? 'crosshair' : 'default';
+      overlayCanvasRef.current.style.cursor = mode === 'draw' ? '' : 'default';
     }
   }
 
@@ -343,6 +311,12 @@ export default function CanvasArea() {
     if ((e.key === 'Delete' || e.key === 'Backspace') && selectedBoxId && document.activeElement.tagName !== 'INPUT') {
       deleteBox(currentIndex, selectedBoxId);
     }
+  }
+
+  function handleFit() {
+    const el = imgElRef.current;
+    if (!el) return;
+    setZoom(calcFitZoom(el.naturalWidth, el.naturalHeight));
   }
 
   if (!img) return <div className="canvas-area canvas-area-empty" />;
@@ -353,11 +327,7 @@ export default function CanvasArea() {
         <button className="ct-btn" onClick={() => selectImage(currentIndex - 1)} disabled={currentIndex === 0}>
           <ChevronLeft size={16} />
         </button>
-        <button
-          className="ct-btn"
-          onClick={() => selectImage(currentIndex + 1)}
-          disabled={currentIndex === images.length - 1}
-        >
+        <button className="ct-btn" onClick={() => selectImage(currentIndex + 1)} disabled={currentIndex === images.length - 1}>
           <ChevronRight size={16} />
         </button>
 
@@ -389,12 +359,8 @@ export default function CanvasArea() {
           Delete annotation
         </button>
 
-        <button className="ct-btn" onClick={() => undo(currentIndex)}>
-          <Undo2 size={16} />
-        </button>
-        <button className="ct-btn" onClick={() => redo(currentIndex)}>
-          <Redo2 size={16} />
-        </button>
+        <button className="ct-btn" onClick={() => undo(currentIndex)}><Undo2 size={16} /></button>
+        <button className="ct-btn" onClick={() => redo(currentIndex)}><Redo2 size={16} /></button>
 
         <div className="ct-divider" />
 
@@ -413,7 +379,9 @@ export default function CanvasArea() {
         <button className="ct-btn ct-icon" onClick={() => setZoom((z) => Math.max(0.1, z - 0.15))}>
           <ZoomOut size={15} />
         </button>
-        <span className="ct-zoom">{Math.round(zoom * 100)}%</span>
+        <span className="ct-zoom" onClick={handleFit} title="Click to fit image" style={{ cursor: 'pointer' }}>
+          {Math.round(zoom * 100)}%
+        </span>
         <button className="ct-btn ct-icon" onClick={() => setZoom((z) => Math.min(4, z + 0.15))}>
           <ZoomIn size={15} />
         </button>
@@ -421,7 +389,7 @@ export default function CanvasArea() {
 
       {hint && <div className="canvas-hint">{hint}</div>}
 
-      <div className="canvas-scroll">
+      <div className="canvas-scroll" ref={scrollRef}>
         <div className="canvas-stack" style={{ width: canvasSize().w, height: canvasSize().h }}>
           <canvas ref={baseCanvasRef} className="canvas-el canvas-base" />
           <canvas

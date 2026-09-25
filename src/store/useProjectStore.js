@@ -20,13 +20,12 @@ export const useProjectStore = create((set, get) => ({
   classes: [],
   images: [],
   currentIndex: -1,
-  mode: 'browse', // 'browse' | 'draw'
+  mode: 'browse',
   selectedBoxId: null,
-  statusFilter: 'all', // all | not-started | in-progress | done
+  statusFilter: 'all',
   lastSavedAt: null,
-  history: {}, // imageId -> { past: Box[][], future: Box[][] }
+  history: {},
 
-  // ---- Project / images ----
   loadProject({ name, dirHandle, images }) {
     set({
       projectName: name,
@@ -40,30 +39,38 @@ export const useProjectStore = create((set, get) => ({
     });
   },
 
-  setDirHandle(handle) {
-    set({ dirHandle: handle });
-  },
+  setDirHandle(handle) { set({ dirHandle: handle }); },
+  setExportDirHandle(handle) { set({ exportDirHandle: handle }); },
+  setLastSavedAt(ts) { set({ lastSavedAt: ts }); },
 
-  setExportDirHandle(handle) {
-    set({ exportDirHandle: handle });
-  },
-
-  setLastSavedAt(ts) {
-    set({ lastSavedAt: ts });
-  },
-
+  // Called once the image element loads and we know its natural pixel size.
+  // Also converts any imported boxes that still have _normalized coords.
   setImageDimensions(index, width, height) {
     const { images } = get();
     if (!images[index] || images[index].width) return;
     const updated = images.slice();
-    updated[index] = { ...updated[index], width, height };
+    const img = images[index];
+
+    // Convert _normalized boxes to absolute pixel coords now that we know dimensions
+    const convertedBoxes = img.boxes.map((box) => {
+      if (!box._normalized) return box;
+      const { cx, cy, w, h } = box._normalized;
+      const { _normalized, ...rest } = box;
+      return {
+        ...rest,
+        x: (cx - w / 2) * width,
+        y: (cy - h / 2) * height,
+        w: w * width,
+        h: h * height,
+      };
+    });
+
+    updated[index] = { ...img, width, height, boxes: convertedBoxes };
     set({ images: updated });
   },
 
   activeClassId: null,
-  setActiveClassId(id) {
-    set({ activeClassId: id });
-  },
+  setActiveClassId(id) { set({ activeClassId: id }); },
 
   focusClassInputRequest: 0,
   requestClassInputFocus() {
@@ -79,9 +86,7 @@ export const useProjectStore = create((set, get) => ({
     set({ currentIndex: index, selectedBoxId: null, mode: 'browse', images: updated });
   },
 
-  setStatusFilter(filter) {
-    set({ statusFilter: filter });
-  },
+  setStatusFilter(filter) { set({ statusFilter: filter }); },
 
   setMode(mode) {
     const { images, currentIndex } = get();
@@ -102,7 +107,6 @@ export const useProjectStore = create((set, get) => ({
     set({ images: updated });
   },
 
-  // ---- Classes ----
   addClass(name) {
     const { classes } = get();
     const usedIds = new Set(classes.map((c) => c.id));
@@ -114,16 +118,13 @@ export const useProjectStore = create((set, get) => ({
 
   updateClass(oldId, patch) {
     const { classes } = get();
-    set({
-      classes: classes.map((c) => (c.id === oldId ? { ...c, ...patch } : c)),
-    });
+    set({ classes: classes.map((c) => (c.id === oldId ? { ...c, ...patch } : c)) });
   },
 
   removeClass(id) {
     const { classes, images } = get();
     set({
       classes: classes.filter((c) => c.id !== id),
-      // Unassign boxes that used this class rather than silently deleting them
       images: images.map((img) => ({
         ...img,
         boxes: img.boxes.map((b) => (b.classId === id ? { ...b, classId: null } : b)),
@@ -135,16 +136,10 @@ export const useProjectStore = create((set, get) => ({
     return get().classes.some((c) => c.id === id && c.id !== excludingId);
   },
 
-  // ---- Boxes ----
   pushHistory(imageId, prevBoxes) {
     const { history } = get();
     const h = history[imageId] || { past: [], future: [] };
-    set({
-      history: {
-        ...history,
-        [imageId]: { past: [...h.past, prevBoxes], future: [] },
-      },
-    });
+    set({ history: { ...history, [imageId]: { past: [...h.past, prevBoxes], future: [] } } });
   },
 
   addBox(imageIndex, box) {
@@ -178,15 +173,10 @@ export const useProjectStore = create((set, get) => ({
     const newImg = { ...img, boxes: img.boxes.filter((b) => b.id !== boxId) };
     newImg.status = computeStatus(newImg);
     updated[imageIndex] = newImg;
-    set({
-      images: updated,
-      selectedBoxId: selectedBoxId === boxId ? null : selectedBoxId,
-    });
+    set({ images: updated, selectedBoxId: selectedBoxId === boxId ? null : selectedBoxId });
   },
 
-  selectBox(boxId) {
-    set({ selectedBoxId: boxId });
-  },
+  selectBox(boxId) { set({ selectedBoxId: boxId }); },
 
   undo(imageIndex) {
     const { images, history } = get();

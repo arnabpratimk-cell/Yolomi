@@ -11,8 +11,8 @@
 }
 
 .app-rightcol {
-  width: 300px;
-  min-width: 300px;
+  width: 240px;
+  min-width: 240px;
   background: var(--bg-panel);
   border-left: 1px solid var(--border-subtle);
   display: flex;
