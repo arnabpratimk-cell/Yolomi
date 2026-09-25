@@ -24,6 +24,8 @@ Draw boxes, assign classes, export YOLO / COCO / Pascal VOC — no install, no b
 npm install -g yolomi
 ```
 
+Installs the latest version (**0.0.4**). To install a specific version: `npm install -g yolomi@0.0.3`
+
 Requires [Node.js](https://nodejs.org) (includes npm). Check with `node -v` if you're not sure it's installed.
 ## Run
 
